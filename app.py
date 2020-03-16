@@ -1,4 +1,5 @@
 import dash
+import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, ClientsideFunction
@@ -49,7 +50,12 @@ df["Province/State"] = df[["Province/State","Country/Region"]].apply(lambda x: x
 print(df.info())
 print(df["Province/State"].value_counts(dropna = False))
 df.to_pickle("df_16032020.pkl")
-country_list = df.sort_values(by="Confirmed").drop_duplicates("Country/Region")["Country/Region"].values
+country_list = df.sort_values(by="Confirmed", ascending = False).drop_duplicates("Country/Region")["Country/Region"].values
+
+last_date = df["Last Update Date"].max()
+
+most_impacted_countries = df[df["Last Update Date"] == last_date].groupby("Country/Region").agg({"Confirmed" : "sum", "Deaths" :"sum", "Recovered" :"sum"}).sort_values(by="Confirmed", ascending = False)[:10].reset_index()
+print(most_impacted_countries.head(10))
 #df["Admit Source"] = []#df["Admit Source"].fillna("Not Identified")
 prov_list = ["DUMMY"]#df["Admit Source"].unique().tolist()
 
@@ -139,11 +145,6 @@ def generate_control_card():
                 value=prov_list[:],
                 multi=True,
             ),
-            html.Br(),
-            html.Div(
-                id="reset-btn-outer",
-                children=html.Button(id="reset-btn", children="Reset", n_clicks=0),
-            ),
         ],
     )
 
@@ -168,7 +169,28 @@ app.layout = html.Div(
             + [
                 html.Div(
                     ["initial child"], id="output-clientside", style={"display": "none"}
-                )
+                ),
+                dash_table.DataTable(
+    data=most_impacted_countries.to_dict('records'),
+    columns=[{'id': c, 'name': c} for c in most_impacted_countries.columns],
+
+    style_cell_conditional=[
+        {
+            'if': {'column_id': c},
+            'textAlign': 'left'
+        } for c in ['Date', 'Region']
+    ],
+    style_data_conditional=[
+        {
+            'if': {'row_index': 'odd'},
+            'backgroundColor': 'rgb(248, 248, 248)'
+        }
+    ],
+    style_header={
+        'backgroundColor': 'rgb(230, 230, 230)',
+        'fontWeight': 'bold'
+    }
+)  
             ],
         ),
         # Right column
