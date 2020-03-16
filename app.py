@@ -127,7 +127,7 @@ def generate_control_card():
                 value=country_list[0],
             ),
             html.Br(),
-            html.P("Select analysis Time"),
+            html.P("Select analysis time range"),
             dcc.DatePickerRange(
                 id="date-picker-select",
                 start_date=dt(2014, 1, 1),
@@ -138,7 +138,7 @@ def generate_control_card():
             ),
             html.Br(),
             html.Br(),
-            html.P("Included provinces"),
+            html.P(id = "p-prov", children = ["Included provinces"]),
             dcc.Dropdown(
                 id="prov-select",
                 options=[{"label": i, "value": i} for i in prov_list],
@@ -170,6 +170,7 @@ app.layout = html.Div(
                 html.Div(
                     ["initial child"], id="output-clientside", style={"display": "none"}
                 ),
+                html.Br(),
                 dash_table.DataTable(
     data=most_impacted_countries.to_dict('records'),
     columns=[{'id': c, 'name': c} for c in most_impacted_countries.columns],
@@ -268,7 +269,8 @@ def update_plot(country, provinces):
 @app.callback(
     [
     Output("prov-select", "value"),
-    Output("prov-select", "options")],
+    Output("prov-select", "options"),
+    Output("p-prov", "children"),],
     [
         Input("country-select", "value"),
     ],
@@ -278,10 +280,10 @@ def update_provinces(country):
         prov_list = df[df["Country/Region"] == country]["Province/State"].unique()
         print("Length of the prov_list is " + str(len(prov_list)))
         print(prov_list)
-        return [prov_list, [{"label": i, "value": i} for i in prov_list]]
+        return [prov_list, [{"label": i, "value": i} for i in prov_list], "Included provinces: " + str(len(prov_list))]
     else:
         print("The country selected is not found in the dataframe.")
-        return [prov_list, [{"label": i, "value": i} for i in prov_list]]
+        return [prov_list, [{"label": i, "value": i} for i in prov_list], "Included provinces: " + str(len(prov_list))]
 
 # Run the server
 if __name__ == "__main__":
