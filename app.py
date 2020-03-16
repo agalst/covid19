@@ -43,20 +43,23 @@ df["Last Update"] = pd.to_datetime(df["Last Update"])
 df["Last Update Date"] = df["Last Update"].apply(lambda x: x.date())
 df["Last Update Hour"] = df["Last Update"].apply(lambda x: x.hour)
 #df = df.groupby(by=["Last Update Date", "Country/Region"]).agg({"Last Update" : "last", "Confirmed" : "sum", "Deaths" :"sum", "Recovered" :"sum"}).reset_index()
-df["Country/Region"] = df["Country/Region"].astype('category')
+#df["Country/Region"] = df["Country/Region"].astype('category')
 #df["Province/State"] = df["Province/State"].astype('category')
 #df = df.drop(["Province/State"], axis = 1)
 df["Province/State"] = df[["Province/State","Country/Region"]].apply(lambda x: x[0] if str(x[0]).lower() != "nan" else x[1], axis = 1)
 print(df.info())
 print(df["Province/State"].value_counts(dropna = False))
-df.to_pickle("df_16032020.pkl")
+#df.to_pickle("df_16032020.pkl")
 country_list = df.sort_values(by="Confirmed", ascending = False).drop_duplicates("Country/Region")["Country/Region"].values
 
 last_date = df["Last Update Date"].max()
 
-most_impacted_countries = df[df["Last Update Date"] == last_date].groupby("Country/Region").agg({"Confirmed" : "sum", "Deaths" :"sum", "Recovered" :"sum"}).sort_values(by="Confirmed", ascending = False)[:10].reset_index()
-print(most_impacted_countries.head(10))
-#df["Admit Source"] = []#df["Admit Source"].fillna("Not Identified")
+most_impacted_countries = df.sort_values(
+        by=["Last Update"], ascending = False).drop_duplicates(subset=["Country/Region", "Province/State"], keep='first').groupby(
+            ["Country/Region"]).agg({"Last Update Date" : 'last',  "Confirmed" : "sum", "Deaths" : "sum", "Recovered" : "sum"}).reset_index()
+most_impacted_countries = most_impacted_countries.sort_values(by = "Confirmed", ascending = False)[["Country/Region", "Last Update Date", "Confirmed", "Deaths", "Recovered"]][:15]
+print(most_impacted_countries.head(15))
+
 prov_list = ["DUMMY"]#df["Admit Source"].unique().tolist()
 
 # Date
