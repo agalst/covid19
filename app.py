@@ -8,6 +8,16 @@ import pandas as pd
 import datetime
 from datetime import datetime as dt
 import pathlib
+import glob
+
+path = r'./COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/' # use your path
+#all_files = glob.glob(path + "/*.csv")
+
+li = []
+
+#for filename in all_files:
+#    df = pd.read_csv(filename)
+#    li.append(df)
 
 app = dash.Dash(
     __name__,
@@ -22,27 +32,33 @@ BASE_PATH = pathlib.Path(__file__).parent.resolve()
 DATA_PATH = BASE_PATH.joinpath("data").resolve()
 
 # Read data
-df = pd.read_csv(DATA_PATH.joinpath("clinical_analytics.csv"))
-
-clinic_list = df["Clinic Name"].unique()
-df["Admit Source"] = df["Admit Source"].fillna("Not Identified")
-admit_list = df["Admit Source"].unique().tolist()
+#df = pd.concat(li, axis=0, ignore_index=True).reset_index()
+#print(df.head())
+df = pd.read_pickle("df_16032020.pkl")
+#df = df.drop("index", axis = 1)
+#df["Country/Region"] = df["Country/Region"].astype('category')
+#df["Province/State"] = df["Province/State"].astype('category')
+print(df.info())
+#df.to_pickle("df_16032020.pkl")
+clinic_list = ["DUMMY"]#df["Clinic Name"].unique()
+#df["Admit Source"] = []#df["Admit Source"].fillna("Not Identified")
+admit_list = ["DUMMY"]#df["Admit Source"].unique().tolist()
 
 # Date
 # Format checkin Time
-df["Check-In Time"] = df["Check-In Time"].apply(
-    lambda x: dt.strptime(x, "%Y-%m-%d %I:%M:%S %p")
-)  # String -> Datetime
+#df["Check-In Time"] = df["Check-In Time"].apply(
+#    lambda x: dt.strptime(x, "%Y-%m-%d %I:%M:%S %p")
+#)  # String -> Datetime
 
 # Insert weekday and hour of checkin time
-df["Days of Wk"] = df["Check-In Hour"] = df["Check-In Time"]
-df["Days of Wk"] = df["Days of Wk"].apply(
-    lambda x: dt.strftime(x, "%A")
-)  # Datetime -> weekday string
+#df["Days of Wk"] = df["Check-In Hour"] = df["Check-In Time"]
+#df["Days of Wk"] = df["Days of Wk"].apply(
+#    lambda x: dt.strftime(x, "%A")
+#)  # Datetime -> weekday string
 
-df["Check-In Hour"] = df["Check-In Hour"].apply(
-    lambda x: dt.strftime(x, "%I %p")
-)  # Datetime -> int(hour) + AM/PM
+#df["Check-In Hour"] = df["Check-In Hour"].apply(
+#    lambda x: dt.strftime(x, "%I %p")
+#)  # Datetime -> int(hour) + AM/PM
 
 day_list = [
     "Monday",
@@ -54,10 +70,10 @@ day_list = [
     "Sunday",
 ]
 
-check_in_duration = df["Check-In Time"].describe()
+#check_in_duration = df["Check-In Time"].describe()
 
 # Register all departments for callbacks
-all_departments = df["Department"].unique().tolist()
+all_departments = ["DUMMY"]#df["Department"].unique().tolist()
 wait_time_inputs = [
     Input((i + "_wait_time_graph"), "selectedData") for i in all_departments
 ]
