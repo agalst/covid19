@@ -47,9 +47,9 @@ df = pd.read_pickle("df_16032020.pkl")
 
 print(df.info())
 df.to_pickle("df_16032020.pkl")
-country_list = df["Country/Region"].unique()
+country_list = df.sort_values(by="Confirmed").drop_duplicates()["Country/Region"].values
 #df["Admit Source"] = []#df["Admit Source"].fillna("Not Identified")
-admit_list = ["DUMMY"]#df["Admit Source"].unique().tolist()
+prov_list = ["DUMMY"]#df["Admit Source"].unique().tolist()
 
 # Date
 # Format checkin Time
@@ -95,7 +95,7 @@ def description_card():
     return html.Div(
         id="description-card",
         children=[
-            html.H3("COVID-19 Analytics Dashboard"),
+            html.H3("COVID-19 Analytics"),
             html.Div(
                 id="intro",
                 children="Explore the virus spread dynamics.",
@@ -119,7 +119,7 @@ def generate_control_card():
                 value=country_list[0],
             ),
             html.Br(),
-            html.P("Select Check-In Time"),
+            html.P("Select analysis Time"),
             dcc.DatePickerRange(
                 id="date-picker-select",
                 start_date=dt(2014, 1, 1),
@@ -130,11 +130,11 @@ def generate_control_card():
             ),
             html.Br(),
             html.Br(),
-            html.P("Select Admit Source"),
+            html.P("Included provinces"),
             dcc.Dropdown(
                 id="admit-select",
-                options=[{"label": i, "value": i}   for i in admit_list],
-                value=admit_list[:],
+                options=[{"label": i, "value": i}   for i in prov_list],
+                value=prov_list[:],
                 multi=True,
             ),
             html.Br(),
@@ -221,17 +221,18 @@ def update_plot(country):
         subset = df[df["Country/Region"] == country].dropna()
         subset = subset.sort_values(by="Last Update")
         data_conf = go.Scatter(x=subset["Last Update"],
-                         y=subset["Confirmed"].values)
+                         y=subset["Confirmed"].values, name="Confirmed")
         data_death = go.Scatter(x=subset["Last Update"],
-                         y=subset["Deaths"].values)
+                         y=subset["Deaths"].values, name="Died")
         data_rec = go.Scatter(x=subset["Last Update"],
-                         y=subset["Recovered"].values)
+                         y=subset["Recovered"].values, name="Recovered")
         #layout = go.Layout(title='Energy Plot', xaxis=dict(title='Date'),
         #           yaxis=dict(title='(kWh)'))
         print(data_conf)
         return {"data" : [data_conf, data_death, data_rec], "layout" :  {'clickmode': 'event+select', 
                                               'xaxis' : {"title" : 'Update date'},
-                                              'yaxis' : {"title" : 'Aggregated number of cases'}}}
+                                              'yaxis' : {"title" : 'Aggregated number of cases'},
+                                              'font' : dict(family="Courier New, monospace", size=14, color="#7f7f7f")}}
     else:
         return None
 
