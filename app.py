@@ -251,9 +251,10 @@ app.layout = html.Div(
 def update_plot(country, provinces, start_date, end_date):
     print(country)
     if country in df["Country/Region"].unique():
-        subset = df[df["Country/Region"] == country].dropna()#subset=['Confirmed', 'Deaths', "Recovered"]
+        subset = df[df["Country/Region"] == country].dropna(subset=['Confirmed', 'Deaths', "Recovered"])
         subset = subset[subset["Last Update Date"] >= pd.to_datetime(start_date)][subset["Last Update Date"] <= pd.to_datetime(end_date)]
-        subset = subset[subset["Province/State"].isin(provinces)].sort_values(by="Last Update")
+        subset = subset[subset["Province/State"].isin(provinces)].sort_values(by="Last Update").drop_duplicates(subset="Last Update", keep='first')
+        print(subset)
         subset = subset.groupby(by=["Last Update Date", "Last Update Hour"]).agg({"Last Update" : "last", "Confirmed" : "sum", "Deaths" :"sum", "Recovered" :"sum"}).reset_index()
         data_conf = go.Scatter(x=subset["Last Update"],
                          y=subset["Confirmed"].values, name="Confirmed")
@@ -266,10 +267,10 @@ def update_plot(country, provinces, start_date, end_date):
         
         return [{"data" : [data_conf, data_death, data_rec], "layout" :  {'clickmode': 'event+select', 
                                               'xaxis' : {"title" : 'Update date'},
-                                              'yaxis' : {"title" : 'Aggregated number of cases'},
+                                              'yaxis' : {"title" : 'Cases reported'},
                                               'font' : dict(family="Courier New, monospace", size=14, color="#7f7f7f")}}]
     else:
-        print("The country selected is not found in the dataframe.")
+        print("The selected country is not found in the dataframe.")
         return [None]
 
 @app.callback(
@@ -288,7 +289,7 @@ def update_provinces(country):
         print(prov_list)
         return [prov_list, [{"label": i, "value": i} for i in prov_list], "Included provinces: " + str(len(prov_list))]
     else:
-        print("The country selected is not found in the dataframe.")
+        print("The selected country is not found in the dataframe.")
         return [prov_list, [{"label": i, "value": i} for i in prov_list], "Included provinces: " + str(len(prov_list))]
 
         
