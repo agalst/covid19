@@ -130,11 +130,11 @@ def generate_control_card():
             html.P("Select analysis time range"),
             dcc.DatePickerRange(
                 id="date-picker-select",
-                start_date=dt(2014, 1, 1),
-                end_date=dt(2014, 1, 15),
-                min_date_allowed=dt(2014, 1, 1),
-                max_date_allowed=dt(2014, 12, 31),
-                initial_visible_month=dt(2014, 1, 1),
+                start_date=dt(2020, 1, 1),
+                end_date=dt(2020, 3, 15),
+                min_date_allowed=dt(2019, 9, 1),
+                max_date_allowed=dt(2020, 12, 31),
+                initial_visible_month=dt(2020, 1, 1),
             ),
             html.Br(),
             html.Br(),
@@ -241,12 +241,15 @@ app.layout = html.Div(
     [
         Input("country-select", "value"),
         Input("prov-select", "value"),
+        Input("date-picker-select", "start_date"),
+        Input("date-picker-select", "end_date"),
     ],
 )
-def update_plot(country, provinces):
+def update_plot(country, provinces, start_date, end_date):
     print(country)
     if country in df["Country/Region"].unique():
         subset = df[df["Country/Region"] == country].dropna()#subset=['Confirmed', 'Deaths', "Recovered"]
+        subset = subset[subset["Last Update Date"] >= pd.to_datetime(start_date)][subset["Last Update Date"] <= pd.to_datetime(end_date)]
         subset = subset[subset["Province/State"].isin(provinces)].sort_values(by="Last Update")
         subset = subset.groupby(by=["Last Update Date", "Last Update Hour"]).agg({"Last Update" : "last", "Confirmed" : "sum", "Deaths" :"sum", "Recovered" :"sum"}).reset_index()
         data_conf = go.Scatter(x=subset["Last Update"],
@@ -284,6 +287,8 @@ def update_provinces(country):
     else:
         print("The country selected is not found in the dataframe.")
         return [prov_list, [{"label": i, "value": i} for i in prov_list], "Included provinces: " + str(len(prov_list))]
+
+        
 
 # Run the server
 if __name__ == "__main__":
