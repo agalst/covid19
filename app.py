@@ -12,13 +12,13 @@ import glob
 import plotly.graph_objs as go
 
 path = r'./COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/' # use your path
-#all_files = glob.glob(path + "/*.csv")
+all_files = glob.glob(path + "/*.csv")
 
 li = []
 
-#for filename in all_files:
-#    df = pd.read_csv(filename)
-#    li.append(df)
+for filename in all_files:
+    df = pd.read_csv(filename)
+    li.append(df)
 
 app = dash.Dash(
     __name__,
@@ -33,21 +33,23 @@ BASE_PATH = pathlib.Path(__file__).parent.resolve()
 DATA_PATH = BASE_PATH.joinpath("data").resolve()
 
 # Read data
-#df = pd.concat(li, axis=0, ignore_index=True).reset_index()
+df = pd.concat(li, axis=0, ignore_index=True).reset_index()
 #print(df.head())
-df = pd.read_pickle("df_16032020.pkl")
+#df = pd.read_pickle("df_16032020.pkl")
 
-#df = df.drop(["Longitude", "Latitude"], axis = 1)
-#df["Last Update"] = pd.to_datetime(df["Last Update"])
-#df["Last Update Date"] = df["Last Update"].apply(lambda x: x.date())
+df = df.drop(["Longitude", "Latitude"], axis = 1)
+df["Last Update"] = pd.to_datetime(df["Last Update"])
+df["Last Update Date"] = df["Last Update"].apply(lambda x: x.date())
+df["Last Update Hour"] = df["Last Update"].apply(lambda x: x.hour)
 #df = df.groupby(by=["Last Update Date", "Country/Region"]).agg({"Last Update" : "last", "Confirmed" : "sum", "Deaths" :"sum", "Recovered" :"sum"}).reset_index()
-#df["Country/Region"] = df["Country/Region"].astype('category')
+df["Country/Region"] = df["Country/Region"].astype('category')
 #df["Province/State"] = df["Province/State"].astype('category')
 #df = df.drop(["Province/State"], axis = 1)
-
+df["Province/State"] = df[["Province/State","Country/Region"]].apply(lambda x: x[0] if str(x[0]).lower() != "nan" else x[1], axis = 1)
 print(df.info())
+print(df["Province/State"].value_counts(dropna = False))
 df.to_pickle("df_16032020.pkl")
-country_list = df.sort_values(by="Confirmed").drop_duplicates()["Country/Region"].values
+country_list = df.sort_values(by="Confirmed").drop_duplicates("Country/Region")["Country/Region"].values
 #df["Admit Source"] = []#df["Admit Source"].fillna("Not Identified")
 prov_list = ["DUMMY"]#df["Admit Source"].unique().tolist()
 
@@ -132,8 +134,8 @@ def generate_control_card():
             html.Br(),
             html.P("Included provinces"),
             dcc.Dropdown(
-                id="admit-select",
-                options=[{"label": i, "value": i}   for i in prov_list],
+                id="prov-select",
+                options=[{"label": i, "value": i} for i in prov_list],
                 value=prov_list[:],
                 multi=True,
             ),
@@ -210,16 +212,20 @@ app.layout = html.Div(
 
 
 @app.callback(
-    Output("covid-dynamic-plot", "figure"),
+    [
+        Output("covid-dynamic-plot", "figure"),
+    ],
     [
         Input("country-select", "value"),
+        Input("prov-select", "value"),
     ],
 )
-def update_plot(country):
+def update_plot(country, provinces):
     print(country)
     if country in df["Country/Region"].unique():
-        subset = df[df["Country/Region"] == country].dropna()
-        subset = subset.sort_values(by="Last Update")
+        subset = df[df["Country/Region"] == country].dropna()#subset=['Confirmed', 'Deaths', "Recovered"]
+        subset = subset[subset["Province/State"].isin(provinces)].sort_values(by="Last Update")
+        subset = subset.groupby(by=["Last Update Date", "Last Update Hour"]).agg({"Last Update" : "last", "Confirmed" : "sum", "Deaths" :"sum", "Recovered" :"sum"}).reset_index()
         data_conf = go.Scatter(x=subset["Last Update"],
                          y=subset["Confirmed"].values, name="Confirmed")
         data_death = go.Scatter(x=subset["Last Update"],
@@ -228,15 +234,32 @@ def update_plot(country):
                          y=subset["Recovered"].values, name="Recovered")
         #layout = go.Layout(title='Energy Plot', xaxis=dict(title='Date'),
         #           yaxis=dict(title='(kWh)'))
-        print(data_conf)
-        return {"data" : [data_conf, data_death, data_rec], "layout" :  {'clickmode': 'event+select', 
+        
+        return [{"data" : [data_conf, data_death, data_rec], "layout" :  {'clickmode': 'event+select', 
                                               'xaxis' : {"title" : 'Update date'},
                                               'yaxis' : {"title" : 'Aggregated number of cases'},
-                                              'font' : dict(family="Courier New, monospace", size=14, color="#7f7f7f")}}
+                                              'font' : dict(family="Courier New, monospace", size=14, color="#7f7f7f")}}]
     else:
-        return None
+        print("The country selected is not found in the dataframe.")
+        return [None]
 
-
+@app.callback(
+    [
+    Output("prov-select", "value"),
+    Output("prov-select", "options")],
+    [
+        Input("country-select", "value"),
+    ],
+)
+def update_provinces(country):
+    if country in df["Country/Region"].unique():
+        prov_list = df[df["Country/Region"] == country]["Province/State"].unique()
+        print("Length of the prov_list is " + str(len(prov_list)))
+        print(prov_list)
+        return [prov_list, [{"label": i, "value": i} for i in prov_list]]
+    else:
+        print("The country selected is not found in the dataframe.")
+        return [prov_list, [{"label": i, "value": i} for i in prov_list]]
 
 # Run the server
 if __name__ == "__main__":
